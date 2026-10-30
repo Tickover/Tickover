@@ -85,8 +85,11 @@ queries_us = [
 [money]
 ebay_fee_percent   = 13       # fee when YOU resell (business seller ≈ 12.8% + 30p). Private sellers: set 0
 resale_shipping    = 5        # £ you'll spend posting it on
-min_profit         = 40       # £ — hide deals below this
-min_roi_percent    = 30       # hide deals that return less than this on money spent
+min_profit         = 50       # £ — hide deals below this
+min_roi_percent    = 60       # hide deals that return less than this on money spent
+min_score          = 50       # only good-scoring deals
+max_results        = 25       # show the best 25 only
+max_buy_price      = 200      # nothing over £200 to buy
 
 [adjust]
 # Resale tweaks applied automatically
