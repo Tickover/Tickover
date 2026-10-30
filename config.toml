@@ -1,0 +1,167 @@
+# ─────────────────────────────────────────────────────────────
+#  Tickover — settings
+#  Edit this file, save, and re-run. Lines starting with # are notes.
+# ─────────────────────────────────────────────────────────────
+
+[app]
+name = "Tickover"             # shown at the top of the report — change it to whatever you like
+
+[ebay]
+# Free keys from https://developer.ebay.com  (see README, step 2)
+client_id     = "PASTE-YOUR-APP-ID-HERE"
+client_secret = "PASTE-YOUR-CERT-ID-HERE"
+# Which eBay sites to search. Same keys work for all of them.
+#   EBAY_GB = UK   EBAY_DE = Germany   EBAY_FR = France   EBAY_IT = Italy   EBAY_US = USA
+# Overseas sites only show sellers who post to the UK, and import VAT is added
+# to the cost automatically (see [imports]). Germany is the best extra one —
+# lots of cheap "für Bastler" (for tinkerers) watches.
+marketplaces  = ["EBAY_GB", "EBAY_DE"]
+
+[etsy]
+# Etsy is good for vintage pieces. Free keys from https://www.etsy.com/developers
+enabled       = false         # set to true once you've added keys
+keystring     = "PASTE-YOUR-KEYSTRING-HERE"
+shared_secret = "PASTE-YOUR-SHARED-SECRET-HERE"
+uk_only       = true          # only UK-based shops
+assumed_postage_uk     = 5    # Etsy search doesn't say postage, so assume this (£)
+assumed_postage_abroad = 15
+queries = [
+  "vintage watch not working",
+  "vintage watch for repair",
+  "watch spares or repairs",
+  "vintage mechanical watch needs service",
+  "vintage omega watch not working",
+  "vintage seiko spares",
+]
+
+[search]
+min_price = 10                # £ — ignore anything cheaper (mostly junk)
+max_price = 600               # £ — your maximum spend per watch
+# Each phrase is searched separately. Add or remove freely.
+queries = [
+  "watch spares repair",
+  "watch not working",
+  "watch needs battery",
+  "watch needs service",
+  "automatic watch spares",
+  "vintage watch spares repairs",
+  "seiko spares repair",
+  "omega spares repair",
+  "tissot not working",
+  "longines spares",
+]
+# Also pull everything listed as "For parts or not working" in Wristwatches
+include_parts_condition = true
+
+# Searches in the local language for the overseas eBay sites
+queries_de = [
+  "uhr für bastler",
+  "armbanduhr defekt",
+  "automatikuhr läuft nicht",
+  "omega bastler",
+  "seiko bastler",
+  "longines defekt",
+  "tissot defekt",
+]
+queries_fr = [
+  "montre pour pièces",
+  "montre ne fonctionne pas",
+  "montre automatique hs",
+  "omega pour pièces",
+]
+queries_it = [
+  "orologio da riparare",
+  "orologio non funzionante",
+  "orologio per ricambi",
+  "omega da revisionare",
+]
+queries_us = [
+  "watch for parts repair",
+  "watch not working",
+  "omega for parts",
+  "seiko for parts repair",
+]
+
+[money]
+ebay_fee_percent   = 13       # fee when YOU resell (business seller ≈ 12.8% + 30p). Private sellers: set 0
+resale_shipping    = 5        # £ you'll spend posting it on
+min_profit         = 40       # £ — hide deals below this
+min_roi_percent    = 30       # hide deals that return less than this on money spent
+
+[adjust]
+# Resale tweaks applied automatically
+ladies_factor        = 0.6    # ladies' models usually sell for less
+luxury_quartz_factor = 0.75   # quartz versions of £300+ brands sell for less than automatics
+
+[details]
+# Reads the full listing (seller's description and item specifics) for the top watches,
+# to catch hidden problems like "new battery tried, still not working" and find the exact reference number.
+enabled   = true
+max_items = 40
+
+[market_check]
+# Prices each promising watch against similar WORKING watches for sale on eBay UK,
+# instead of using a flat brand average.
+enabled         = true
+max_checks      = 40     # how many top watches to price-check each run
+min_comparables = 4      # need at least this many similar watches, otherwise use the brand average
+asking_to_sold  = 0.8    # asking prices run higher than what watches actually sell for
+
+[imports]
+# Costs added to anything bought from outside the UK
+vat_percent  = 20             # UK import VAT
+duty_percent = 0              # often 0% thanks to trade deals; can apply in some cases — check gov.uk if buying regularly
+courier_fee  = 12             # courier's handling charge on parcels over £135
+
+[fx]
+# Exchange rates: £ per 1 unit. Set 28 Oct 2026 — update every month or two.
+EUR = 0.837
+USD = 0.753
+
+[batteries]
+# Known battery sizes. If every word on the left is in the title, that battery is linked.
+# Add your own as you learn them, e.g.  "seiko sq100" = "SR626SW"
+"tissot prx quartz" = "Renata 371"
+"ga-100"            = "CR1220"
+
+[alerts]
+# Free phone alerts via the ntfy app (iOS/Android). Pick a hard-to-guess topic name.
+ntfy_topic    = ""            # e.g. "mackenzy-watch-deals-8f3k"  (blank = no alerts)
+alert_min_score = 60          # only push the strong ones (0–100)
+
+# ─────────────────────────────────────────────────────────────
+#  Typical resale price (£) of a WORKING, clean example.
+#  These are rough starting points — check eBay SOLD listings
+#  for the models you buy and tune them. Matching is on the title.
+# ─────────────────────────────────────────────────────────────
+[brands]
+"rolex"          = 3500
+"tudor"          = 1200
+"omega"          = 750
+"breitling"      = 1300
+"cartier"        = 1300
+"zenith"         = 1100
+"iwc"            = 1500
+"jaeger"         = 1500
+"heuer"          = 450      # catches TAG Heuer and vintage Heuer
+"longines"       = 450
+"oris"           = 450
+"rado"           = 300
+"tissot"         = 160
+"hamilton"       = 220
+"certina"        = 160
+"raymond weil"   = 180
+"baume"          = 400
+"mido"           = 220
+"seiko"          = 110
+"grand seiko"    = 2200
+"orient"         = 70
+"citizen"        = 70
+"bulova"         = 90
+"smiths"         = 120
+"enicar"         = 180
+"zodiac"         = 150
+"doxa"           = 350
+"g-shock"        = 45
+"casio"          = 25
+"garmin"         = 120
