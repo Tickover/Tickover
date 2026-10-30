@@ -27,7 +27,6 @@ import base64
 import csv
 import html
 import json
-import os
 import re
 import sys
 import time
@@ -212,9 +211,7 @@ class EbayClient:
         self.token = None
 
     def _get_token(self) -> str:
-        # Keys can come from environment variables (GitHub Secrets) or config.toml
-        cid = os.environ.get("EBAY_CLIENT_ID") or self.cfg["client_id"]
-        secret = os.environ.get("EBAY_CLIENT_SECRET") or self.cfg["client_secret"]
+        cid, secret = self.cfg["client_id"], self.cfg["client_secret"]
         if not cid or "PASTE" in cid:
             sys.exit("✗ Add your eBay client_id and client_secret to config.toml first "
                      "(or run with --demo to try it out).")
@@ -1262,7 +1259,7 @@ document.querySelectorAll('.check input').forEach(cb=>{{ cb.checked=!!done[cb.da
 
 
 def send_alerts(deals: list[Deal], cfg: dict, seen_path: Path) -> int:
-    topic = (os.environ.get("NTFY_TOPIC") or cfg["alerts"].get("ntfy_topic", "")).strip()
+    topic = cfg["alerts"].get("ntfy_topic", "").strip()
     if not topic:
         return 0
     try:
@@ -1422,12 +1419,8 @@ def main() -> None:
         print(f"  your flips: {summary['sold']} sold, £{summary['profit']:,.0f} profit, {summary['holding']} still to sell")
     if not args.all:
         deals = [d for d in deals if d.score > 0 and d.profit >= m["min_profit"]
-                 and d.roi >= m["min_roi_percent"] and not d.flags
-                 and d.score >= m.get("min_score", 0)
-                 and (not m.get("max_buy_price") or d.listing.price + d.listing.shipping <= m["max_buy_price"])]
+                 and d.roi >= m["min_roi_percent"] and not d.flags]
     deals.sort(key=lambda d: (d.score, d.profit), reverse=True)
-    if not args.all and m.get("max_results"):
-        deals = deals[: int(m["max_results"])]
 
     write_html(deals, HERE / "report.html", args.demo, len(listings), app_name)
     write_csv(deals, HERE / "deals.csv")
