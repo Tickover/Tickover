@@ -1422,8 +1422,12 @@ def main() -> None:
         print(f"  your flips: {summary['sold']} sold, £{summary['profit']:,.0f} profit, {summary['holding']} still to sell")
     if not args.all:
         deals = [d for d in deals if d.score > 0 and d.profit >= m["min_profit"]
-                 and d.roi >= m["min_roi_percent"] and not d.flags]
+                 and d.roi >= m["min_roi_percent"] and not d.flags
+                 and d.score >= m.get("min_score", 0)
+                 and (not m.get("max_buy_price") or d.listing.price + d.listing.shipping <= m["max_buy_price"])]
     deals.sort(key=lambda d: (d.score, d.profit), reverse=True)
+    if not args.all and m.get("max_results"):
+        deals = deals[: int(m["max_results"])]
 
     write_html(deals, HERE / "report.html", args.demo, len(listings), app_name)
     write_csv(deals, HERE / "deals.csv")
