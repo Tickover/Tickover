@@ -27,6 +27,7 @@ import base64
 import csv
 import html
 import json
+import os
 import re
 import sys
 import time
@@ -102,7 +103,8 @@ FAULTS = [
      r"|ungepr[üu]ft|nicht getestet|non test[ée]|non testato", 20, 2),
     ("Sold as faulty",
      r"f[üu]r bastler|bastleruhr|als ersatzteil|ersatzteilspender|pour pi[èe]ces|pour bricoleur"
-     r"|per ricambi|per pezzi di ricambio|da riparare|spares (or|and|&|/)? ?repairs?|for repair", 40, 3),
+     r"|per ricambi|per pezzi di ricambio|da riparare|spares\s*(or|and|&|/|\+)?\s*repairs?|\bspares?\b(?!\s+links?)|"
+     r"for (repair|restoration|parts)|\brestoration\b|\bproject\b|\bdefekt\b|\bbastler\b|\bnon[- ]?runner\b", 40, 3),
 ]
 
 # Things that usually mean "walk away" — big risk or not a real watch
@@ -211,7 +213,9 @@ class EbayClient:
         self.token = None
 
     def _get_token(self) -> str:
-        cid, secret = self.cfg["client_id"], self.cfg["client_secret"]
+        # Keys can come from environment variables (GitHub Secrets) or config.toml
+        cid = os.environ.get("EBAY_CLIENT_ID") or self.cfg["client_id"]
+        secret = os.environ.get("EBAY_CLIENT_SECRET") or self.cfg["client_secret"]
         if not cid or "PASTE" in cid:
             sys.exit("✗ Add your eBay client_id and client_secret to config.toml first "
                      "(or run with --demo to try it out).")
@@ -306,7 +310,8 @@ class EbayClient:
             title = it.get("title", "")
             if _NOT_WORKING_RE.search(title) or part_reason(title):
                 continue
-            if sum(w in title.lower() for w in words) < max(1, len(words) - 1):
+            need = len(words) if len(words) <= 3 else len(words) - 1
+            if sum(w in title.lower() for w in words) < max(1, need):
                 continue                      # not really the same model
             p = it.get("price") or {}
             try:
@@ -782,6 +787,13 @@ def market_check(deals: list[Deal], cfg: dict, client: "EbayClient") -> int:
             continue
         if LADIES_RE.search(d.listing.title) and not ref:
             q += " ladies"
+        if not ref:
+            if d.movement == "Quartz":
+                q += " quartz"
+            elif d.movement.startswith("Automatic"):
+                q += " automatic" if re.search(r"automat", d.listing.title, re.I) else " manual"
+            if re.search(r"vintage|antique|19[2-8]\d|[2-8]0s\b", d.listing.title, re.I):
+                q += " vintage"
         if q not in cache:
             cache[q] = client.comparable_prices(q)
             checked += 1
@@ -789,10 +801,15 @@ def market_check(deals: list[Deal], cfg: dict, client: "EbayClient") -> int:
         prices = cache[q]
         if len(prices) >= min_n:
             prices = sorted(prices)
-            mid = prices[len(prices) // 2]
-            if GOLD_RE.search(d.listing.title):
-                mid = max(mid, d.resale)
-            d.resale = round(mid * factor, 2)
+            low_q = prices[len(prices) // 4]            # lower quartile: a cautious, realistic price
+            cap = float(cfg["brands"].get(d.brand, 0)) * float(mc.get("max_vs_brand", 1.5))
+            if LADIES_RE.search(d.listing.title):
+                cap *= cfg.get("adjust", {}).get("ladies_factor", 0.6)
+            est = low_q * factor
+            if cap and est > cap:
+                est = cap
+                d.notes.append("Resale capped: similar listings vary a lot, check sold prices")
+            d.resale = round(est, 2)
             d.resale_basis = (f"Based on {len(prices)} similar working watches for sale"
                               + (f" (ref {ref})" if ref else ""))
             finalise(d, cfg)
@@ -1259,7 +1276,7 @@ document.querySelectorAll('.check input').forEach(cb=>{{ cb.checked=!!done[cb.da
 
 
 def send_alerts(deals: list[Deal], cfg: dict, seen_path: Path) -> int:
-    topic = cfg["alerts"].get("ntfy_topic", "").strip()
+    topic = (os.environ.get("NTFY_TOPIC") or cfg["alerts"].get("ntfy_topic", "")).strip()
     if not topic:
         return 0
     try:
@@ -1419,8 +1436,12 @@ def main() -> None:
         print(f"  your flips: {summary['sold']} sold, £{summary['profit']:,.0f} profit, {summary['holding']} still to sell")
     if not args.all:
         deals = [d for d in deals if d.score > 0 and d.profit >= m["min_profit"]
-                 and d.roi >= m["min_roi_percent"] and not d.flags]
+                 and d.roi >= m["min_roi_percent"] and not d.flags
+                 and d.score >= m.get("min_score", 0)
+                 and (not m.get("max_buy_price") or d.listing.price + d.listing.shipping <= m["max_buy_price"])]
     deals.sort(key=lambda d: (d.score, d.profit), reverse=True)
+    if not args.all and m.get("max_results"):
+        deals = deals[: int(m["max_results"])]
 
     write_html(deals, HERE / "report.html", args.demo, len(listings), app_name)
     write_csv(deals, HERE / "deals.csv")
